@@ -1,0 +1,28 @@
+########################
+#        Lambda        #
+########################
+
+## This is used to dispatch specific domain names to specific AWS Lambda functions.
+## The general format is:
+##  <domain> <function name>[?options]
+## The options will be parsed as URL queries, i.e. k1=v1&k2=v2&...
+## Available options:
+##  InvocationType=Event|RequestResponse|DryRun,
+##  LogType=<string>
+##  Qualifier=<string>
+##
+## See also:
+##  https://docs.aws.amazon.com/sdk-for-go/api/service/lambda/#Lambda.Invoke
+
+## NOTICE:
+##  The present implementation simply use an O(N) searching to match the specific domains.
+##  The number of lambda rules is expected no more than what an O(N) algorithm can afford.
+
+## Forward *.lan, *.local, *.home, *.home.arpa, *.internal and *.localdomain to sam-hello-HelloWorldFunction-81opGLCJIEA1
+# lan              sam-hello-HelloWorldFunction-81opGLCJIEA1
+# local            sam-hello-HelloWorldFunction-81opGLCJIEA1
+# home             sam-hello-HelloWorldFunction-81opGLCJIEA1
+# home.arpa        sam-hello-HelloWorldFunction-81opGLCJIEA1
+# internal         sam-hello-HelloWorldFunction-81opGLCJIEA1
+# localdomain      sam-hello-HelloWorldFunction-81opGLCJIEA1
+# 192.in-addr.arpa sam-hello-HelloWorldFunction-81opGLCJIEA1
