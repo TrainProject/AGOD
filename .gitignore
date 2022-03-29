@@ -18,3 +18,4 @@ agod/*.md
 agod/*.md.minisig
 agod/my-*.toml
 agod/my-*.txt
+.vscode

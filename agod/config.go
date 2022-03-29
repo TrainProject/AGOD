@@ -535,6 +535,14 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 	proxy.nxLogFile = config.NxLog.File
 	proxy.nxLogFormat = config.NxLog.Format
 
+	if len(config.Lambda.Format) == 0 {
+		config.Lambda.Format = "tsv"
+	} else {
+		config.Lambda.Format = strings.ToLower(config.Lambda.Format)
+	}
+	if config.Lambda.Format != "tsv" && config.Lambda.Format != "ltsv" {
+		return errors.New("Unsupported lambda log format")
+	}
 	proxy.lambdaRegion = config.Lambda.Region
 	proxy.lambdaFile = config.Lambda.File
 	proxy.lambdaFormat = config.Lambda.Format
