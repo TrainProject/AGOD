@@ -9,30 +9,30 @@ import (
 
 type RFC8427Message struct {
 	// https://datatracker.ietf.org/doc/html/rfc8427#section-2.1
-	ID              uint16                  `json:",omitempty"`
-	QR              bool                    `json:",omitempty"`
-	Opcode          uint8                   `json:",omitempty"`
-	AA              bool                    `json:",omitempty"`
-	TC              bool                    `json:",omitempty"`
-	RD              bool                    `json:",omitempty"`
-	RA              bool                    `json:",omitempty"`
-	AD              bool                    `json:",omitempty"`
-	CD              bool                    `json:",omitempty"`
-	RCODE           uint8                   `json:",omitempty"`
-	QDCOUNT         uint16                  `json:",omitempty"`
-	ANCOUNT         uint16                  `json:",omitempty"`
-	NSCOUNT         uint16                  `json:",omitempty"`
-	ARCOUNT         uint16                  `json:",omitempty"`
-	QNAME           string                  `json:",omitempty"`
-	CompressedQNAME *RFC8427Compressed      `json:"compressedQNAME,omitempty"`
-	QTYPE           uint16                  `json:",omitempty"`
-	QTYPEname       string                  `json:",omitempty"`
-	QCLASS          uint16                  `json:",omitempty"`
-	QCLASSname      string                  `json:",omitempty"`
-	QuestionRRs     []RFC8427ResourceRecord `json:"questionRRs,omitempty"`
-	AnswerRRs       []RFC8427ResourceRecord `json:"answerRRs,omitempty"`
-	AuthorityRRs    []RFC8427ResourceRecord `json:"authorityRRs,omitempty"`
-	AdditionalRRs   []RFC8427ResourceRecord `json:"additionalRRs,omitempty"`
+	ID              uint16                   `json:",omitempty"`
+	QR              bool                     `json:",omitempty"`
+	Opcode          uint8                    `json:",omitempty"`
+	AA              bool                     `json:",omitempty"`
+	TC              bool                     `json:",omitempty"`
+	RD              bool                     `json:",omitempty"`
+	RA              bool                     `json:",omitempty"`
+	AD              bool                     `json:",omitempty"`
+	CD              bool                     `json:",omitempty"`
+	RCODE           uint8                    `json:",omitempty"`
+	QDCOUNT         uint16                   `json:",omitempty"`
+	ANCOUNT         uint16                   `json:",omitempty"`
+	NSCOUNT         uint16                   `json:",omitempty"`
+	ARCOUNT         uint16                   `json:",omitempty"`
+	QNAME           string                   `json:",omitempty"`
+	CompressedQNAME *RFC8427Compressed       `json:"compressedQNAME,omitempty"`
+	QTYPE           uint16                   `json:",omitempty"`
+	QTYPEname       string                   `json:",omitempty"`
+	QCLASS          uint16                   `json:",omitempty"`
+	QCLASSname      string                   `json:",omitempty"`
+	QuestionRRs     []*RFC8427ResourceRecord `json:"questionRRs,omitempty"`
+	AnswerRRs       []*RFC8427ResourceRecord `json:"answerRRs,omitempty"`
+	AuthorityRRs    []*RFC8427ResourceRecord `json:"authorityRRs,omitempty"`
+	AdditionalRRs   []*RFC8427ResourceRecord `json:"additionalRRs,omitempty"`
 
 	// These members are all encoded in base16 encoding, described in [RFC4648].
 	// https://datatracker.ietf.org/doc/html/rfc8427#section-2.4
@@ -61,7 +61,7 @@ type RFC8427ResourceRecord struct {
 	TTL            int32              `json:",omitempty"`
 	RDLENGTH       uint16             `json:",omitempty"`
 	RDATAHEX       string             `json:",omitempty"`
-	RRSet          []RFC8427Rdata     `json:"rrSet,omitempty"`
+	RRSet          []*RFC8427Rdata    `json:"rrSet,omitempty"`
 
 	// These members are all encoded in base16 encoding, described in [RFC4648].
 	// https://datatracker.ietf.org/doc/html/rfc8427#section-2.4
@@ -138,7 +138,7 @@ func NewRFC8427Message(msg *dns.Msg, bufferSize uint16) (*RFC8427Message, error)
 		v.QCLASS = q.Qclass
 	} else if v.QDCOUNT > 1 {
 		for _, x := range msg.Question {
-			v.QuestionRRs = append(v.QuestionRRs, RFC8427ResourceRecord{
+			v.QuestionRRs = append(v.QuestionRRs, &RFC8427ResourceRecord{
 				NAME:  x.Name,
 				TYPE:  x.Qtype,
 				CLASS: x.Qclass,
@@ -153,51 +153,27 @@ func NewRFC8427Message(msg *dns.Msg, bufferSize uint16) (*RFC8427Message, error)
 	buffer := make([]byte, bufferSize)
 
 	for _, x := range msg.Answer {
-		rdataHex, err := hexEncodeRdata(buffer, x)
+		y, err := NewRFC8427ResourceRecord(x, buffer)
 		if err != nil {
 			return nil, err
 		}
-
-		hdr := x.Header()
-		v.AnswerRRs = append(v.AnswerRRs, RFC8427ResourceRecord{
-			NAME:     hdr.Name,
-			TYPE:     hdr.Rrtype,
-			CLASS:    hdr.Class,
-			TTL:      int32(hdr.Ttl),
-			RDATAHEX: rdataHex,
-		})
+		v.AnswerRRs = append(v.AnswerRRs, y)
 	}
 
 	for _, x := range msg.Ns {
-		rdataHex, err := hexEncodeRdata(buffer, x)
+		y, err := NewRFC8427ResourceRecord(x, buffer)
 		if err != nil {
 			return nil, err
 		}
-
-		hdr := x.Header()
-		v.AuthorityRRs = append(v.AuthorityRRs, RFC8427ResourceRecord{
-			NAME:     hdr.Name,
-			TYPE:     hdr.Rrtype,
-			CLASS:    hdr.Class,
-			TTL:      int32(hdr.Ttl),
-			RDATAHEX: rdataHex,
-		})
+		v.AuthorityRRs = append(v.AuthorityRRs, y)
 	}
 
 	for _, x := range msg.Extra {
-		rdataHex, err := hexEncodeRdata(buffer, x)
+		y, err := NewRFC8427ResourceRecord(x, buffer)
 		if err != nil {
 			return nil, err
 		}
-
-		hdr := x.Header()
-		v.AdditionalRRs = append(v.AdditionalRRs, RFC8427ResourceRecord{
-			NAME:     hdr.Name,
-			TYPE:     hdr.Rrtype,
-			CLASS:    hdr.Class,
-			TTL:      int32(hdr.Ttl),
-			RDATAHEX: rdataHex,
-		})
+		v.AdditionalRRs = append(v.AdditionalRRs, y)
 	}
 
 	return v, nil
@@ -258,6 +234,26 @@ func (self *RFC8427Message) Msg() (*dns.Msg, error) {
 	}
 
 	return msg, nil
+}
+
+func NewRFC8427ResourceRecord(rr dns.RR, buffer []byte) (*RFC8427ResourceRecord, error) {
+	if buffer == nil {
+		buffer = make([]byte, 4096)
+	}
+
+	rdataHex, err := hexEncodeRdata(buffer, rr)
+	if err != nil {
+		return nil, err
+	}
+
+	hdr := rr.Header()
+	return &RFC8427ResourceRecord{
+		NAME:     hdr.Name,
+		TYPE:     hdr.Rrtype,
+		CLASS:    hdr.Class,
+		TTL:      int32(hdr.Ttl),
+		RDATAHEX: rdataHex,
+	}, nil
 }
 
 func (self *RFC8427ResourceRecord) RR() ([]dns.RR, error) {
